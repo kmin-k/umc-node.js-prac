@@ -1,5 +1,5 @@
 import dotenv from "dotenv";
-import express, { Express, Request, Response } from "express";
+import express, { Express, Request, Response, NextFunction } from "express";
 import cors from "cors";
 import userRouter from "./modules/users/user.routes.js";
 import storeRouter from "./modules/stores/store.routes.js";
@@ -22,6 +22,15 @@ app.use("/api/v1/users", userRouter);
 app.use("/api/v1", storeRouter);
 app.use("/api/v1", reviewRouter);
 app.use("/api/v1", missionRouter);
+
+app.use((err: any, req: Request, res: Response, next: NextFunction) => {
+  console.error(err);
+  res.status(err.statusCode || 500).json({
+    isSuccess: false,
+    code: err.statusCode || 500,
+    message: err.message || "서버 오류",
+  });
+});
 
 app.listen(port, () => {
   console.log(`[server]: http://localhost:${port}`);
