@@ -1,41 +1,43 @@
-import { Request, Response } from "express";
-import { StatusCodes } from "http-status-codes";
+import { Body, Controller, Get, Path, Post, Response, Route, SuccessResponse, Tags } from "tsoa";
 import { addReviewToStore, getReviewsByUser } from "../services/review.service.js";
+import { CreateReviewRequestDTO } from "../dtos/review.dto.js";
+import { ErrorResponse } from "../../../common/error.dto.js";
 
-export const handleCreateReview = async (req: Request, res: Response) => {
-  try {
-    const storeId = Number(req.params.storeId);
-    if (isNaN(storeId)) {
-      return res.status(StatusCodes.BAD_REQUEST).json({
-        isSuccess: false,
-        code: StatusCodes.BAD_REQUEST,
-        message: "storeId는 숫자여야 합니다.",
-      });
-    }
-
-    const result = await addReviewToStore(storeId, req.body);
-    return res.status(StatusCodes.CREATED).json({
-      isSuccess: true,
-      code: StatusCodes.CREATED,
-      message: "리뷰 작성 성공",
-      result,
-    });
-  } catch (error: any) {
-    return res.status(StatusCodes.BAD_REQUEST).json({
-      isSuccess: false,
-      code: StatusCodes.BAD_REQUEST,
-      message: error.message ?? "리뷰 작성 실패",
-    });
+@Route("api/v1")
+@Tags("Review")
+export class ReviewController extends Controller {
+  /**
+   * 가게에 리뷰 작성 API
+   * 가게/유저 존재 여부와 점수(0~5) 범위가 검증됩니다.
+   */
+  @Post("stores/{storeId}/reviews")
+  @SuccessResponse(201, "리뷰 작성 성공")
+  @Response<ErrorResponse>(400, "존재하지 않는 가게/유저 또는 점수 범위 오류", {
+    isSuccess: false,
+    code: 400,
+    message: "존재하지 않는 가게입니다.",
+  })
+  public async createReview(
+    @Path() storeId: number,
+    @Body() body: CreateReviewRequestDTO
+  ): Promise<any> {
+    this.setStatus(201);
+    const result = await addReviewToStore(storeId, body);
+    return { isSuccess: true, code: 201, message: "리뷰 작성 성공", result };
   }
-};
 
-export const handleGetMyReviews = async (req: Request, res: Response) => {
-  try {
-    const userId = Number(req.params.userId);
-    if (isNaN(userId)) return res.status(400).json({ isSuccess: false, code: 400, message: "userId 숫자 아님" });
+  /**
+   * 내가 작성한 리뷰 목록 조회 API
+   */
+  @Get("users/{userId}/reviews")
+  @SuccessResponse(200, "리뷰 목록 조회 성공")
+  @Response<ErrorResponse>(400, "존재하지 않는 유저", {
+    isSuccess: false,
+    code: 400,
+    message: "존재하지 않는 유저입니다.",
+  })
+  public async getMyReviews(@Path() userId: number): Promise<any> {
     const result = await getReviewsByUser(userId);
-    return res.status(200).json({ isSuccess: true, code: 200, message: "리뷰 목록 조회 성공", result });
-  } catch (error: any) {
-    return res.status(400).json({ isSuccess: false, code: 400, message: error.message });
+    return { isSuccess: true, code: 200, message: "리뷰 목록 조회 성공", result };
   }
-};
+}

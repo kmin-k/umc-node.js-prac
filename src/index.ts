@@ -1,10 +1,9 @@
 import dotenv from "dotenv";
 import express, { Express, Request, Response, NextFunction } from "express";
 import cors from "cors";
-import userRouter from "./modules/users/user.routes.js";
-import storeRouter from "./modules/stores/store.routes.js";
-import reviewRouter from "./modules/reviews/review.routes.js";
-import missionRouter from "./modules/missions/mission.routes.js";
+import swaggerUi from "swagger-ui-express";
+import fs from "fs";
+import { RegisterRoutes } from "../build/routes.js";
 
 dotenv.config();
 const app: Express = express();
@@ -18,10 +17,10 @@ app.get("/", (req: Request, res: Response) => {
   res.send("Hello World!");
 });
 
-app.use("/api/v1/users", userRouter);
-app.use("/api/v1", storeRouter);
-app.use("/api/v1", reviewRouter);
-app.use("/api/v1", missionRouter);
+RegisterRoutes(app);
+
+const swaggerDoc = JSON.parse(fs.readFileSync("./build/swagger.json", "utf-8"));
+app.use("/docs", swaggerUi.serve, swaggerUi.setup(swaggerDoc));
 
 app.use((err: any, req: Request, res: Response, next: NextFunction) => {
   console.error(err);
