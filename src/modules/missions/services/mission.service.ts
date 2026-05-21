@@ -6,7 +6,11 @@ import {
   findUserMission,
   createUserMission,
   findUserMissionById,
+  findMissionsByStoreId,
+  findUserMissionsByStatus,
+  updateUserMissionToComplete,
 } from "../repositories/mission.repository.js";
+
 import {
   CreateMissionRequestDTO,
   MissionResponseDTO,
@@ -41,12 +45,12 @@ export const addMissionToStore = async (
   }
 
   return {
-    missionId: mission.id,
-    storeId: mission.store_id,
-    content: mission.content,
-    reward: mission.reward,
-    deadline: mission.deadline ? mission.deadline.toISOString() : null,
-  };
+  missionId: Number(mission.id),
+  storeId: Number(mission.store_id),
+  content: mission.content,
+  reward: mission.reward,
+  deadline: mission.deadline ? mission.deadline.toISOString() : null,
+};
 };
 
 // ====== 미션 도전 (신규) ======
@@ -82,9 +86,56 @@ export const challengeMissionByUser = async (
   }
 
   return {
-    userMissionId: userMission.id,
-    userId: userMission.user_id,
-    missionId: userMission.mission_id,
-    status: userMission.status,
+  userMissionId: Number(userMission.id),
+  userId: Number(userMission.user_id),
+  missionId: Number(userMission.mission_id),
+  status: userMission.status,
+};
+};
+
+// 가게 미션 목록
+export const getMissionsByStore = async (storeId: number) => {
+  const store = await findStoreById(storeId);
+  if (!store) throw new Error("존재하지 않는 가게입니다.");
+  const missions = await findMissionsByStoreId(storeId);
+  return missions.map((m) => ({
+    missionId: Number(m.id),
+    content: m.content,
+    reward: m.reward,
+    deadline: m.deadline?.toISOString() ?? null,
+  }));
+};
+
+// 내 미션 목록 (status 별)
+export const getUserMissionsByStatus = async (
+  userId: number,
+  status: "ongoing" | "complete"
+) => {
+  const user = await findUserById(userId);
+  if (!user) throw new Error("존재하지 않는 유저입니다.");
+  const list = await findUserMissionsByStatus(userId, status);
+  return list.map((um) => ({
+    userMissionId: Number(um.id),
+    missionId: Number(um.mission_id),
+    storeName: um.missions.stores.name,
+    content: um.missions.content,
+    reward: um.missions.reward,
+    status: um.status,
+  }));
+};
+
+// 미션 완료 처리
+export const completeMission = async (userId: number, missionId: number) => {
+  const user = await findUserById(userId);
+  if (!user) throw new Error("존재하지 않는 유저입니다.");
+  const userMission = await findUserMission(userId, missionId);
+  if (!userMission) throw new Error("도전 중인 미션이 아닙니다.");
+  if (userMission.status === "complete") throw new Error("이미 완료된 미션입니다.");
+  const updated = await updateUserMissionToComplete(Number(userMission.id));
+  return {
+    userMissionId: Number(updated.id),
+    userId: Number(updated.user_id),
+    missionId: Number(updated.mission_id),
+    status: updated.status,
   };
 };

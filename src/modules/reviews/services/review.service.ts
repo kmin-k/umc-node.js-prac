@@ -1,6 +1,6 @@
 import { findStoreById } from "../../stores/repositories/store.repository.js";
 import { findUserById } from "../../users/repositories/user.repository.js";
-import { createReview, findReviewById } from "../repositories/review.repository.js";
+import { createReview, findReviewById, findReviewsByUserId } from "../repositories/review.repository.js";
 import { CreateReviewRequestDTO, ReviewResponseDTO } from "../dtos/review.dto.js";
 
 export const addReviewToStore = async (
@@ -39,10 +39,23 @@ export const addReviewToStore = async (
   }
 
   return {
-    reviewId: review.id,
-    storeId: review.store_id,
-    userId: review.user_id,
-    score: Number(review.score),
-    content: review.content,
+  reviewId: Number(review.id),
+  storeId: Number(review.store_id),
+  userId: Number(review.user_id),
+  score: Number(review.score),
+  content: review.content ?? "",
   };
+};
+
+export const getReviewsByUser = async (userId: number) => {
+  const user = await findUserById(userId);
+  if (!user) throw new Error("존재하지 않는 유저입니다.");
+  const reviews = await findReviewsByUserId(userId);
+  return reviews.map((r) => ({
+    reviewId: Number(r.id),
+    storeId: Number(r.store_id),
+    storeName: r.stores.name,
+    score: Number(r.score),
+    content: r.content ?? "",
+  }));
 };

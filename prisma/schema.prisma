@@ -1,0 +1,86 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model missions {
+  id            BigInt          @id @default(autoincrement())
+  store_id      BigInt
+  content       String          @db.VarChar(255)
+  reward        Int
+  deadline      DateTime?       @db.DateTime(0)
+  created_at    DateTime?       @default(now()) @db.DateTime(0)
+  stores        stores          @relation(fields: [store_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "missions_ibfk_1")
+  user_missions user_missions[]
+
+  @@index([store_id], map: "store_id")
+}
+
+model regions {
+  id     BigInt   @id @default(autoincrement())
+  name   String   @db.VarChar(50)
+  stores stores[]
+}
+
+model reviews {
+  id         BigInt    @id @default(autoincrement())
+  store_id   BigInt
+  user_id    BigInt
+  score      Decimal   @db.Decimal(3, 2)
+  content    String?   @db.Text
+  created_at DateTime? @default(now()) @db.DateTime(0)
+  stores     stores    @relation(fields: [store_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "reviews_ibfk_1")
+  users      users     @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "reviews_ibfk_2")
+
+  @@index([store_id], map: "store_id")
+  @@index([user_id], map: "user_id")
+}
+
+model stores {
+  id         BigInt     @id @default(autoincrement())
+  region_id  BigInt
+  name       String     @db.VarChar(100)
+  address    String?    @db.VarChar(255)
+  score      Decimal?   @default(0.00) @db.Decimal(3, 2)
+  created_at DateTime?  @default(now()) @db.DateTime(0)
+  missions   missions[]
+  reviews    reviews[]
+  regions    regions    @relation(fields: [region_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "stores_ibfk_1")
+
+  @@index([region_id], map: "region_id")
+}
+
+model user_missions {
+  id         BigInt               @id @default(autoincrement())
+  user_id    BigInt
+  mission_id BigInt
+  status     user_missions_status @default(ongoing)
+  created_at DateTime?            @default(now()) @db.DateTime(0)
+  users      users                @relation(fields: [user_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_missions_ibfk_1")
+  missions   missions             @relation(fields: [mission_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "user_missions_ibfk_2")
+
+  @@unique([user_id, mission_id], map: "unique_user_mission")
+  @@index([mission_id], map: "mission_id")
+}
+
+model users {
+  id            BigInt          @id @default(autoincrement())
+  name          String          @db.VarChar(50)
+  email         String          @unique(map: "email") @db.VarChar(100)
+  password      String          @db.VarChar(255)
+  phone_number  String?         @db.VarChar(20)
+  address       String?         @db.VarChar(255)
+  created_at    DateTime?       @default(now()) @db.DateTime(0)
+  updated_at    DateTime?       @default(now()) @db.DateTime(0)
+  reviews       reviews[]
+  user_missions user_missions[]
+}
+
+enum user_missions_status {
+  ongoing
+  complete
+}

@@ -1,34 +1,30 @@
-import { pool } from "../../../db.config.js";
-import { RowDataPacket, ResultSetHeader } from "mysql2";
+import { prisma } from "../../../prisma.js";
 
-interface ReviewRow extends RowDataPacket {
-  id: number;
-  store_id: number;
-  user_id: number;
-  score: string;
-  content: string;
-  created_at: Date;
-}
-
-// 리뷰 생성
 export const createReview = async (
   storeId: number,
   userId: number,
   score: number,
   content: string
 ): Promise<number> => {
-  const [result] = await pool.query<ResultSetHeader>(
-    "INSERT INTO reviews (store_id, user_id, score, content) VALUES (?, ?, ?, ?)",
-    [storeId, userId, score, content]
-  );
-  return result.insertId;
+  const created = await prisma.reviews.create({
+    data: {
+      store_id: BigInt(storeId),
+      user_id: BigInt(userId),
+      score,
+      content,
+    },
+  });
+  return Number(created.id);
 };
 
-// 리뷰 단건 조회
 export const findReviewById = async (reviewId: number) => {
-  const [rows] = await pool.query<ReviewRow[]>(
-    "SELECT * FROM reviews WHERE id = ?",
-    [reviewId]
-  );
-  return rows[0] ?? null;
+  return prisma.reviews.findUnique({ where: { id: BigInt(reviewId) } });
+};
+
+export const findReviewsByUserId = async (userId: number) => {
+  return prisma.reviews.findMany({
+    where: { user_id: BigInt(userId) },
+    orderBy: { id: "desc" },
+    include: { stores: true },
+  });
 };
